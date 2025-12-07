@@ -56,3 +56,27 @@ kyc-aml-document-classifier/
 ├── requirements.txt
 └── README.md
 ```
+
+# How to run locally (quickstart):
+
+## Create & activate a venv:
+```
+    python -m venv .venv
+    source .venv/bin/activate
+```
+## Install dependencies:
+```
+    pip install -r requirements.txt
+```
+## Generate a small synthetic dataset:
+```
+    python dataset_generator/generate_synthetic_data.py -n 5
+```
+## (Optional) Train a tiny model:
+```
+    python training/train_classifier.py --data dataset_generator/output_dataset --epochs 1
+```
+## Run API:
+```
+    uvicorn api.main:app --reload --port 8000
+```
