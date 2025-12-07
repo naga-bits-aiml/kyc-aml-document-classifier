@@ -1,0 +1,8 @@
+tensorflow==2.15.0
+numpy
+Pillow
+qrcode
+uvicorn
+fastapi
+python-multipart
+opencv-python
