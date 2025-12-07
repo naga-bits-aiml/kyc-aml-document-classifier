@@ -30,7 +30,7 @@ class InferenceEngine:
         if self.model is None:
             # dummy deterministic prediction based on filename hash
             idx = abs(hash(os.path.basename(image_path))) % len(CLASS_MAP)
-            return {"label": CLASS_MAP[idx], "confidence": float(0.5 + (idx / 10)}
+            return {"label": CLASS_MAP[idx], "confidence": float(0.5 + (idx / 10))}
         preds = self.model.predict(np.expand_dims(img, axis=0))[0]
         idx = int(np.argmax(preds))
         return {"label": CLASS_MAP[idx], "confidence": float(preds[idx])}
