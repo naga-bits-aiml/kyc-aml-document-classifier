@@ -1,8 +1,7 @@
-tensorflow==2.15.0
-numpy
-Pillow
-qrcode
-uvicorn
 fastapi
+uvicorn[standard]
+tensorflow==2.12.1
+pillow
+numpy
+opencv-python-headless
 python-multipart
-opencv-python
