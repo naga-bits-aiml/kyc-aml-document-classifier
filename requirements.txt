@@ -5,3 +5,6 @@ pillow
 numpy
 opencv-python-headless
 python-multipart
+qrcode[pil]
+roboflow
+requests

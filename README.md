@@ -13,7 +13,7 @@ Its responsibility is to classify uploaded ID documents into one of five support
 - Passport  
 
 The service uses:
-- A **synthetic dataset generator**
+- **Real datasets** from Roboflow and Hugging Face
 - A **TensorFlow EfficientNetB0 classifier**
 - A **FastAPI inference API**
 - **Docker** for deployment
@@ -25,19 +25,21 @@ The service uses:
 kyc-aml-document-classifier/
 │
 ├── dataset_generator/
-│   ├── generate_synthetic_data.py
-│   ├── templates/
-│   │   ├── aadhaar_bg.png          (placeholder)
-│   │   ├── pan_bg.png              (placeholder)
-│   │   ├── voterid_bg.png          (placeholder)
-│   │   ├── dl_bg.png               (placeholder)
-│   │   ├── passport_bg.png         (placeholder)
-│   │   ├── aadhaar_logo.png        (placeholder)
-│   │   ├── pan_logo.png            (placeholder)
-│   │   ├── eci_logo.png            (placeholder)
-│   │   ├── dl_logo.png             (placeholder)
-│   │   └── passport_logo.png       (placeholder)
-│   └── output_dataset/             (auto-generated)
+│   ├── download_roboflow_dataset.ipynb
+│   ├── extract_passport_dataset.ipynb
+│   └── dataset/                    (downloaded datasets)
+│       ├── train/
+│       │   ├── aadhar/
+│       │   ├── driving/
+│       │   ├── pan/
+│       │   ├── voter/
+│       │   └── passport/
+│       └── valid/
+│           ├── aadhar/
+│           ├── driving/
+│           ├── pan/
+│           ├── voter/
+│           └── passport/
 │
 ├── training/
 │   ├── train_classifier.py
@@ -60,21 +62,39 @@ kyc-aml-document-classifier/
 # How to run locally (quickstart):
 
 ## Create & activate a venv:
+
+### Using Python venv:
 ```
-    python -m venv .venv
-    source .venv/bin/activate
+    python3.10 -m venv .venv  # Use Python 3.10
+    source .venv/bin/activate  # On Linux/Mac
+    .venv\Scripts\Activate.ps1  # On Windows PowerShell
+```
+
+### Using Conda (recommended):
+```
+    conda create -n kyc-aml-env python=3.10 -y
+    conda activate kyc-aml-env
 ```
 ## Install dependencies:
 ```
     pip install -r requirements.txt
 ```
-## Generate a small synthetic dataset:
+
+## Download Dataset:
+
+### Step 1: Download Roboflow Dataset (4 classes: aadhar, driving, pan, voter)
+1. Download dataset from [Roboflow ID Cards Classification](https://universe.roboflow.com/trial-b8awm/id-cards-classification-phz4u/dataset/1)
+2. Extract using the notebook: `dataset_generator/download_roboflow_dataset.ipynb`
+
+### Step 2: Download Passport Dataset from Hugging Face
+1. Clone/download passport dataset (Arrow format)
+2. Extract using the notebook: `dataset_generator/extract_passport_dataset.ipynb`
+
+Both notebooks will organize the data into `dataset_generator/dataset/` with train/valid splits.
+
+## Train the Model:
 ```
-    python dataset_generator/generate_synthetic_data.py -n 5
-```
-## (Optional) Train a tiny model:
-```
-    python training/train_classifier.py --data dataset_generator/output_dataset --epochs 1
+    python training/train_classifier.py --data dataset_generator/dataset/train --epochs 20
 ```
 ## Run API:
 ```
