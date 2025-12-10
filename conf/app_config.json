@@ -1,0 +1,24 @@
+{
+  "app_name": "KYC/AML Document Classifier",
+  "version": "1.0.0",
+  "api": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "debug": false
+  },
+  "model": {
+    "num_classes": 5,
+    "class_names": ["aadhar", "driving", "pan", "passport", "voter"],
+    "image_size": 224,
+    "confidence_threshold": 0.5
+  },
+  "preprocessing": {
+    "enable_card_detection": true,
+    "max_image_size": 2048,
+    "supported_formats": ["jpg", "jpeg", "png", "bmp", "tiff"]
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}
