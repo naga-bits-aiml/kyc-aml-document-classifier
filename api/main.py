@@ -132,12 +132,52 @@ async def lifespan(app: FastAPI):
     engine = None
 
 
-# Initialize FastAPI app with lifespan
+# Initialize FastAPI app with lifespan and enhanced metadata for agent discoverability
 app = FastAPI(
     title=app_config['app_name'],
     version=app_config['version'],
-    description="Document classification API for KYC/AML identity documents",
-    lifespan=lifespan
+    description="""AI-powered Document Classification API for KYC/AML identity verification.
+    
+    This service classifies Indian identity documents into 5 categories:
+    - Aadhar Card
+    - Driving License
+    - PAN Card
+    - Passport
+    - Voter ID
+    
+    **For AI Agents:**
+    - OpenAPI spec available at: /openapi.json
+    - Agent capabilities at: /.well-known/ai-plugin.json
+    - Service metadata at: /api-docs
+    """,
+    lifespan=lifespan,
+    # Enhanced metadata for agent discovery
+    openapi_tags=[
+        {
+            "name": "health",
+            "description": "Service health and status monitoring"
+        },
+        {
+            "name": "info",
+            "description": "API information and capabilities"
+        },
+        {
+            "name": "prediction",
+            "description": "Document classification and prediction endpoints"
+        },
+        {
+            "name": "agent-discovery",
+            "description": "Endpoints for AI agent service discovery"
+        }
+    ],
+    contact={
+        "name": "KYC-AML Document Classifier",
+        "url": "https://github.com/naga-bits-aiml/kyc-aml-document-classifier",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
 )
 
 # Add CORS middleware
@@ -172,35 +212,69 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-@app.get("/")
+@app.get("/", tags=["info"])
 def root():
-    """Root endpoint"""
+    """
+    Root endpoint with API information and navigation.
+    
+    Returns basic service information and available endpoints.
+    Useful for AI agents to discover service capabilities.
+    """
     logger.debug("Root endpoint accessed")
     return {
         "app": app_config['app_name'],
         "version": app_config['version'],
         "status": "running",
+        "description": "AI-powered document classification for KYC/AML identity verification",
         "endpoints": {
             "health": "/health",
             "info": "/info",
-            "predict": "/predict"
+            "classes": "/classes",
+            "predict": "/predict",
+            "docs": "/docs",
+            "openapi": "/openapi.json",
+            "agent_plugin": "/.well-known/ai-plugin.json"
+        },
+        "agent_discovery": {
+            "openapi_url": "/openapi.json",
+            "capabilities": ["document-classification", "image-processing", "kyc-verification"]
         }
     }
 
 
-@app.get("/health")
+@app.get("/health", tags=["health"])
 def health():
-    """Health check endpoint"""
+    """
+    Health check endpoint for service monitoring.
+    
+    Returns:
+    - status: Service health status (healthy/unhealthy)
+    - model_loaded: Whether ML model is loaded and ready
+    - timestamp: Current server timestamp
+    
+    Use this endpoint to verify service availability before making predictions.
+    """
     logger.debug("Health check accessed")
     return {
         "status": "healthy" if engine is not None else "initializing",
-        "model_loaded": engine is not None
+        "model_loaded": engine is not None,
+        "timestamp": datetime.now().isoformat()
     }
 
 
-@app.get("/info")
+@app.get("/info", tags=["info"])
 def info():
-    """Get model information"""
+    """
+    Get detailed API information and capabilities.
+    
+    Returns comprehensive information about:
+    - API metadata (name, version)
+    - Model details (architecture, classes, device)
+    - Available endpoints and their methods
+    - Input/output specifications
+    
+    AI agents can use this endpoint to understand service capabilities.
+    """
     logger.debug("Info endpoint accessed")
     if engine is None:
         logger.warning("Info endpoint accessed but model not loaded")
@@ -209,21 +283,66 @@ def info():
     return {
         "app": app_config['app_name'],
         "version": app_config['version'],
+        "description": "AI-powered document classification for KYC/AML identity verification",
         "model": {
+            "architecture": "EfficientNet-B0",
             "classes": engine.class_names,
             "num_classes": len(engine.class_names),
             "confidence_threshold": engine.confidence_threshold,
             "card_detection_enabled": engine.enable_card_detection,
-            "device": str(engine.device)
+            "device": str(engine.device),
+            "input_format": "Image file (JPEG, PNG, etc.)",
+            "output_format": "JSON with predicted class and probabilities"
         },
-        "preprocessing": app_config['preprocessing']
+        "preprocessing": app_config['preprocessing'],
+        "api": {
+            "endpoints": ["/", "/health", "/info", "/classes", "/predict"],
+            "methods": {
+                "/predict": "POST with multipart/form-data"
+            },
+            "openapi_url": "/openapi.json"
+        },
+        "capabilities": [
+            "document-classification",
+            "image-processing",
+            "kyc-verification",
+            "identity-document-recognition"
+        ]
     }
 
 
-@app.post("/predict")
+@app.post("/predict", tags=["prediction"])
 async def predict(file: UploadFile = File(...)):
     """
-    Classify uploaded document image.
+    Classify an identity document image.
+    
+    Upload an image of an Indian identity document to get its classification.
+    The service supports 5 document types: Aadhar, Driving License, PAN Card, Passport, and Voter ID.
+    
+    **Request:**
+    - Method: POST
+    - Content-Type: multipart/form-data
+    - Body: Image file (JPEG, PNG, BMP, TIFF)
+    
+    **Response:**
+    - predicted_class: The identified document type
+    - confidence: Prediction confidence (0.0 to 1.0)
+    - probabilities: Probability scores for all classes
+    - success: Whether prediction succeeded
+    
+    **Example for AI Agents:**
+    ```python
+    import requests
+    
+    with open('document.jpg', 'rb') as f:
+        response = requests.post(
+            'http://localhost:8000/predict',
+            files={'file': f}
+        )
+    result = response.json()
+    print(f"Document type: {result['predicted_class']}")
+    print(f"Confidence: {result['confidence']:.2%}")
+    ```
     
     Args:
         file: Image file (jpg, jpeg, png, bmp, tiff)
@@ -292,17 +411,84 @@ async def predict(file: UploadFile = File(...)):
                 logger.warning(f"Failed to remove temporary file {tmp_path}: {e}")
 
 
-@app.get("/classes")
+@app.get("/.well-known/ai-plugin.json", tags=["agent-discovery"])
+def ai_plugin_manifest():
+    """
+    AI Plugin Manifest for agent discovery.
+    
+    This endpoint follows the OpenAI plugin specification and other
+    AI agent frameworks for automatic service discovery.
+    
+    Returns a manifest describing:
+    - API capabilities and description
+    - Authentication requirements
+    - OpenAPI specification location
+    - Service metadata
+    """
+    return {
+        "schema_version": "v1",
+        "name_for_model": "kyc_aml_classifier",
+        "name_for_human": "KYC/AML Document Classifier",
+        "description_for_model": "Classifies Indian identity documents into 5 categories: Aadhar Card, Driving License, PAN Card, Passport, and Voter ID. Accepts image files and returns the document type with confidence scores. Use this when you need to identify or verify Indian identity documents from images.",
+        "description_for_human": "AI-powered classification of Indian identity documents for KYC/AML verification",
+        "auth": {
+            "type": "none"
+        },
+        "api": {
+            "type": "openapi",
+            "url": "/openapi.json",
+            "has_user_authentication": False
+        },
+        "logo_url": "https://raw.githubusercontent.com/naga-bits-aiml/kyc-aml-document-classifier/main/assets/logo.png",
+        "contact_email": "support@example.com",
+        "legal_info_url": "https://github.com/naga-bits-aiml/kyc-aml-document-classifier/blob/main/LICENSE",
+        "capabilities": [
+            "document-classification",
+            "image-processing",
+            "kyc-verification",
+            "identity-verification"
+        ],
+        "supported_document_types": [
+            "aadhar",
+            "driving",
+            "pan",
+            "passport",
+            "voter"
+        ]
+    }
+
+
+@app.get("/classes", tags=["info"])
 def get_classes():
-    """Get list of supported document classes"""
+    """
+    Get list of supported document classes.
+    
+    Returns all document types that this service can classify.
+    Currently supports 5 Indian identity document types.
+    
+    Returns:
+    - classes: List of supported document class names
+    - count: Total number of supported classes
+    - descriptions: Human-readable descriptions of each class
+    """
     logger.debug("Classes endpoint accessed")
     if engine is None:
         logger.warning("Classes endpoint accessed but model not loaded")
         raise HTTPException(status_code=503, detail="Model not initialized yet")
     
+    # Add human-readable descriptions
+    class_descriptions = {
+        "aadhar": "Aadhar Card - India's biometric identity document",
+        "driving": "Driving License - Vehicle operation permit",
+        "pan": "PAN Card - Permanent Account Number for taxation",
+        "passport": "Passport - International travel document",
+        "voter": "Voter ID - Electoral identity card"
+    }
+    
     return {
         "classes": engine.class_names,
-        "num_classes": len(engine.class_names)
+        "num_classes": len(engine.class_names),
+        "descriptions": {cls: class_descriptions.get(cls, "") for cls in engine.class_names}
     }
 
 
