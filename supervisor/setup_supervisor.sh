@@ -92,7 +92,7 @@ else
     wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $MINICONDA_INSTALLER
     
     print_info "Installing Miniconda to ~/miniconda3..."
-    bash $MINICONDA_INSTALLER -b -p ~/miniconda3
+    bash $MINICONDA_INSTALLER -b -u -p ~/miniconda3
     rm $MINICONDA_INSTALLER
     
     # Initialize conda
@@ -106,6 +106,13 @@ fi
 # Get conda paths
 CONDA_BIN="$CONDA_BASE/bin/conda"
 print_status "Conda base: $CONDA_BASE"
+
+# Accept Anaconda Terms of Service
+echo ""
+print_info "Accepting Anaconda Terms of Service..."
+$CONDA_BIN tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+$CONDA_BIN tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+print_status "Terms of Service accepted"
 
 # Create or update conda environment
 echo ""
