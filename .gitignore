@@ -28,8 +28,16 @@ training/model/
 # Dataset output
 dataset_generator/dataset/
 
-# Misc
+# Logs
+logs/
 *.log
+
+# Test reports
+test_reports/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Misc
 dataset_generator/dataset_download_url.txt
-.gitignore
 training/model_download_urls.txt

@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "date_format": "%Y-%m-%d %H:%M:%S",
+    "log_directory": "logs",
+    "log_file_pattern": "kyc_aml_document_classifier_{date}.log",
+    "rotation": {
+      "enabled": true,
+      "when": "midnight",
+      "interval": 1,
+      "backup_count": 30,
+      "encoding": "utf-8"
+    },
+    "console": {
+      "enabled": true,
+      "level": "INFO"
+    },
+    "file": {
+      "enabled": true,
+      "level": "DEBUG"
+    }
+  },
+  "log_levels": {
+    "description": "Available log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL",
+    "DEBUG": "Detailed information, typically of interest only when diagnosing problems",
+    "INFO": "Confirmation that things are working as expected",
+    "WARNING": "An indication that something unexpected happened",
+    "ERROR": "A more serious problem, the software has not been able to perform some function",
+    "CRITICAL": "A serious error, the program itself may be unable to continue running"
+  }
+}

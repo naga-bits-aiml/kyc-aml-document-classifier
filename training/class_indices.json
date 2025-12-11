@@ -1,0 +1,23 @@
+{
+  "class_to_idx": {
+    "aadhar": 0,
+    "driving": 1,
+    "pan": 2,
+    "passport": 3,
+    "voter": 4
+  },
+  "idx_to_class": {
+    "0": "aadhar",
+    "1": "driving",
+    "2": "pan",
+    "3": "passport",
+    "4": "voter"
+  },
+  "class_names": [
+    "aadhar",
+    "driving",
+    "pan",
+    "passport",
+    "voter"
+  ]
+}

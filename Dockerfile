@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Download models during Docker build
+RUN python inference/download_models.py || echo "⚠️ Model download failed at build time, will retry at runtime"
+
 ENV PORT=80
 EXPOSE 80
 

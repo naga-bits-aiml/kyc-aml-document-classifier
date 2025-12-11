@@ -16,9 +16,5 @@
     "enable_card_detection": true,
     "max_image_size": 2048,
     "supported_formats": ["jpg", "jpeg", "png", "bmp", "tiff"]
-  },
-  "logging": {
-    "level": "INFO",
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   }
 }
