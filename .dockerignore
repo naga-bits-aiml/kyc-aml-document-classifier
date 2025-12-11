@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test_reports/
+.tox/
+
+# Logs
+logs/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Dataset files (too large for container)
+dataset_generator/dataset/
+training/dataset/
+
+# Test files
+tests/
+test_*.py
+conftest.py
+pytest.ini
+
+# Model files that will be downloaded
+training/*.pth
+training/model/*.pth
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+.DS_Store
+*.bak
+*.tmp

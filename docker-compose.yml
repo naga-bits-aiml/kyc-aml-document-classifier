@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  kyc-classifier:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kyc-aml-classifier
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount logs directory for persistence
+      - ./logs:/app/logs
+      # Optional: Mount model directory if you want to persist downloaded models
+      - ./training:/app/training
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - kyc-network
+
+networks:
+  kyc-network:
+    driver: bridge
