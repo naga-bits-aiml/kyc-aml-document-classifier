@@ -7,12 +7,14 @@ Loads PyTorch EfficientNet model and performs document classification.
 import json
 import torch
 import torch.nn as nn
-from torchvision import models, transforms
+from torchvision import models
 from PIL import Image
 import numpy as np
 from pathlib import Path
-from typing import Dict, Tuple, Optional
-import cv2
+from typing import Dict, Optional
+
+# Import the preprocessing module (matches training pipeline)
+from inference.preprocess import IDCardPreprocessor, DEFAULT_IMG_SIZE
 
 
 # Get project root
@@ -135,111 +137,14 @@ class InferenceEngine:
             print(f"⚠️  class_indices.json not found, using default classes")
     
     def _setup_transforms(self):
-        """Setup image preprocessing transforms"""
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-    
-    def detect_and_crop_card(self, image_path: str) -> Image.Image:
-        """
-        Detect card contour and crop the card region.
-        
-        Args:
-            image_path: Path to input image
-        
-        Returns:
-            Cropped PIL Image
-        """
-        # Read image
-        image = cv2.imread(image_path)
-        if image is None:
-            raise ValueError(f"Failed to load image: {image_path}")
-        
-        # Convert to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
-        # Apply bilateral filter
-        blurred = cv2.bilateralFilter(gray, 11, 17, 17)
-        
-        # Adaptive thresholding
-        adaptive_thresh = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+        """Setup image preprocessing - uses IDCardPreprocessor to match training"""
+        # Use the same preprocessing as training (380x380, aspect preserving, card detection)
+        self.preprocessor = IDCardPreprocessor(
+            img_size=DEFAULT_IMG_SIZE,  # 380
+            enable_detection=self.enable_card_detection
         )
-        
-        # Combine Canny edges with adaptive threshold
-        edges = cv2.Canny(blurred, 30, 100)
-        combined = cv2.bitwise_or(edges, cv2.bitwise_not(adaptive_thresh))
-        
-        # Morphological operations
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-        dilated = cv2.dilate(combined, kernel, iterations=3)
-        closed = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel, iterations=2)
-        
-        # Find contours
-        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)
-        
-        # Evaluate top contours
-        best_contour = None
-        best_score = 0
-        
-        for contour in contours[:5]:
-            rect = cv2.minAreaRect(contour)
-            width, height = rect[1]
-            
-            if width == 0 or height == 0:
-                continue
-            
-            # Aspect ratio scoring
-            aspect_ratio = max(width, height) / min(width, height)
-            if 1.2 <= aspect_ratio <= 2.0:
-                aspect_ratio_score = 1.0
-            elif 1.0 <= aspect_ratio <= 2.5:
-                aspect_ratio_score = 0.7
-            else:
-                aspect_ratio_score = 0.3
-            
-            # Rectangularity
-            contour_area = cv2.contourArea(contour)
-            hull = cv2.convexHull(contour)
-            hull_area = cv2.contourArea(hull)
-            
-            if hull_area > 0:
-                rectangularity = contour_area / hull_area
-            else:
-                rectangularity = 0
-            
-            score = (aspect_ratio_score * 0.6) + (rectangularity * 0.4)
-            
-            if score > best_score and score > 0.4:
-                best_score = score
-                best_contour = rect
-        
-        # Crop the card region
-        if best_contour is not None:
-            box = cv2.boxPoints(best_contour)
-            box = np.array(box, dtype=np.intp)
-            
-            x, y, w, h = cv2.boundingRect(box)
-            
-            # Add padding
-            padding_x = int(w * 0.08)
-            padding_y = int(h * 0.08)
-            
-            x = max(0, x - padding_x)
-            y = max(0, y - padding_y)
-            w = min(image.shape[1] - x, w + 2 * padding_x)
-            h = min(image.shape[0] - y, h + 2 * padding_y)
-            
-            cropped = image[y:y+h, x:x+w]
-            cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-            return Image.fromarray(cropped_rgb)
-        else:
-            # Return original if no card detected
-            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            return Image.fromarray(image_rgb)
+        print(f"   Preprocessing: {DEFAULT_IMG_SIZE}x{DEFAULT_IMG_SIZE}, "
+              f"card_detection={self.enable_card_detection}")
     
     def predict(self, image_path: str) -> Dict:
         """
@@ -252,14 +157,9 @@ class InferenceEngine:
             Dictionary with prediction results
         """
         try:
-            # Load and preprocess image
-            if self.enable_card_detection:
-                image = self.detect_and_crop_card(image_path)
-            else:
-                image = Image.open(image_path).convert('RGB')
-            
-            # Apply transforms
-            image_tensor = self.transform(image).unsqueeze(0).to(self.device)
+            # Preprocess image using IDCardPreprocessor (matches training pipeline)
+            # Returns tensor of shape (1, 3, 380, 380)
+            image_tensor = self.preprocessor.preprocess(image_path).to(self.device)
             
             # Inference
             with torch.no_grad():
@@ -286,7 +186,12 @@ class InferenceEngine:
                 "confidence": float(confidence),
                 "all_probabilities": class_probabilities,
                 "threshold_met": confidence >= self.confidence_threshold,
-                "card_detection_used": self.enable_card_detection
+                "card_detection_used": self.enable_card_detection,
+                "preprocessing": {
+                    "img_size": DEFAULT_IMG_SIZE,
+                    "aspect_preserved": True,
+                    "card_detection": self.enable_card_detection
+                }
             }
         
         except Exception as e:
